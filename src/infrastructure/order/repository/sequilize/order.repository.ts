@@ -26,7 +26,7 @@ export default class OrderRepository implements OrderRepositoryInterface{
   }
 
     async update(entity: Order): Promise<void> {
-        // Atualize o pedido (excluindo a atualização de 'items')
+        // Atualizando o pedido (excluindo a atualização de 'items')
         await OrderModel.update(
             {
                 customer_id: entity.customerId,
@@ -39,14 +39,14 @@ export default class OrderRepository implements OrderRepositoryInterface{
             }
         );
 
-        // Remova todos os itens do pedido existentes no banco de dados
+        // Removendo todos os itens do pedido existentes no banco de dados
         await OrderItemModel.destroy({
             where: {
                 order_id: entity.id,
             },
         });
 
-        // Adicione os novos itens do pedido ao banco de dados
+        // Adicionando os novos itens do pedido ao banco de dados
         await OrderItemModel.bulkCreate(
             entity.items.map((item) => ({
                 id: item.id,
@@ -63,34 +63,48 @@ export default class OrderRepository implements OrderRepositoryInterface{
     async find(id: string): Promise<Order> {
         let orderModel;
         try {
+            // Buscando o pedido no banco de dados usando o ID fornecido.
             orderModel = await OrderModel.findOne({
                 where: {
                     id,
                 },
                 rejectOnEmpty: true,
-                include: ["items"],
+                include: ["items"], // Incluindo os itens associados ao pedido.
             });
         } catch (error) {
+            // Se houver um erro, lança uma exceção indicando que o pedido não foi encontrado.
             throw new Error("Order not found");
         }
 
-        const order = new Order(id, orderModel.customer_id, orderModel.items
-            .map((item) => new OrderItem(item.id, item.name, item.price, item.product_id, item.quantity)));
+        // Mapeando os dados do modelo do pedido para um objeto Order e o retorna.
+        const order = new Order(
+            id,
+            orderModel.customer_id,
+            orderModel.items.map((item) => new OrderItem(item.id, item.name, item.price, item.product_id, item.quantity))
+        );
 
         return order;
     }
 
 
     async findAll(): Promise<Order[]> {
+        // Buscando todos os pedidos no banco de dados, incluindo os itens associados a cada pedido.
         const orderModels = await OrderModel.findAll({
             include: ["items"],
         });
 
+        // Mapeando os dados dos modelos de pedidos para objetos Order e retorna um array de pedidos.
         const orders = orderModels.map((orderModel) => {
-            return new Order(orderModel.id, orderModel.customer_id, orderModel.items
-                .map((item) => new OrderItem(item.id, item.name, item.price, item.product_id, item.quantity)));
+            return new Order(
+                orderModel.id,
+                orderModel.customer_id,
+                orderModel.items.map((item) =>
+                    new OrderItem(item.id, item.name, item.price, item.product_id, item.quantity)
+                )
+            );
         });
 
         return orders;
     }
+
 }
